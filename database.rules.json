@@ -1,0 +1,40 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "$code.matches(/^[A-HJ-NP-Z2-9]{4}$/)",
+        ".write": "$code.matches(/^[A-HJ-NP-Z2-9]{4}$/)",
+        ".validate": "newData.hasChildren(['phase', 'speciesCount', 'createdAt'])",
+        "phase": { ".validate": "newData.isString() && newData.val().matches(/^(lobby|idle|naming|buzzing|finished)$/)" },
+        "speciesCount": { ".validate": "newData.val() === 8 || newData.val() === 12 || newData.val() === 16" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "players": {
+          "$i": {
+            ".validate": "$i.matches(/^[0-5]$/) && newData.hasChildren(['id', 'name', 'colorIdx'])",
+            "id": { ".validate": "newData.isString() && newData.val().length <= 20" },
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 8" },
+            "colorIdx": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5" },
+            "pile": { "$j": { ".validate": "newData.isNumber()" } },
+            "$other": { ".validate": false }
+          }
+        },
+        "deck": { "$j": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 16" } },
+        "centerPile": { "$j": { ".validate": "newData.isNumber()" } },
+        "lockedOut": { "$j": { ".validate": "newData.isString() && newData.val().length <= 20" } },
+        "named": { "$k": { ".validate": "$k.matches(/^c[0-9]{1,2}$/) && newData.isString() && newData.val().length <= 12" } },
+        "currentCard": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 16" },
+        "flipperIndex": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5" },
+        "buzzedBy": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "revealName": { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "lastEvent": {
+          ".validate": "newData.hasChildren(['msg', 'ts'])",
+          "msg": { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "kind": { ".validate": "newData.isString() && newData.val().length <= 10" },
+          "ts": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

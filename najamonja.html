@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>なんじゃこれ？ - なんじゃもんじゃゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2B2142;
+    --paper:#FBF4E4;
+    --paper-2:#F3E8CF;
+    --plum:#5B2A86;
+    --plum-deep:#3E1A63;
+    --gold:#F2A93B;
+    --gold-deep:#D98A1F;
+    --grass:#3E8E5A;
+    --coral:#E85D5D;
+    --line: rgba(43,33,66,0.14);
+    --shadow: 0 10px 24px rgba(43,33,66,0.18);
+    --radius-lg: 28px;
+    --radius-md: 18px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Zen Maru Gothic', sans-serif;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(242,169,59,0.16), transparent 40%),
+      radial-gradient(circle at 88% 92%, rgba(91,42,134,0.14), transparent 45%),
+      var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:18px 16px 28px;
+  }
+  .screen{ display:none; flex-direction:column; flex:1; animation: fadeIn .35s ease; }
+  .screen.active{ display:flex; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  h1.title{
+    font-weight:900;
+    font-size:28px;
+    letter-spacing:.02em;
+    margin:6px 0 2px;
+    color:var(--plum-deep);
+  }
+  p.subtitle{ margin:0 0 22px; font-size:14px; color:var(--ink); opacity:.72; line-height:1.6; }
+
+  .card-panel{
+    background: var(--paper-2);
+    border:1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding:20px;
+    box-shadow: var(--shadow);
+  }
+  .card-panel + .card-panel{ margin-top:14px; }
+
+  label.field-label{ display:block; font-size:13px; font-weight:700; color:var(--plum-deep); margin:0 0 8px; }
+
+  .stepper{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .stepper button{
+    width:46px;height:46px; border-radius:50%; border:none;
+    background:var(--plum); color:#fff; font-size:22px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .stepper button:active{ transform:scale(.94); }
+  .stepper .count{ font-size:26px; font-weight:900; color:var(--plum-deep); min-width:80px; text-align:center;}
+
+  .seg{ display:flex; gap:8px; }
+  .seg button{
+    flex:1; padding:10px 6px; border-radius:14px; border:2px solid var(--line);
+    background:#fff; font-family:inherit; font-weight:700; font-size:13px; color:var(--ink);
+  }
+  .seg button.active{ border-color:var(--plum); background:var(--plum); color:#fff; }
+
+  .name-rows{ display:flex; flex-direction:column; gap:10px; margin-top:4px;}
+  .name-row{ display:flex; align-items:center; gap:10px; }
+  .swatch{ width:34px;height:34px;border-radius:50%; flex:none; border:2px solid rgba(255,255,255,.7); box-shadow:0 2px 6px rgba(0,0,0,.15);}
+  input.text-input{
+    width:100%; padding:12px 14px; border-radius:14px; border:2px solid var(--line);
+    font-family:inherit; font-size:15px; background:#fff; color:var(--ink);
+  }
+  input.text-input:focus{ outline:none; border-color:var(--plum); }
+
+  .btn{
+    display:flex; align-items:center; justify-content:center;
+    border:none; border-radius:18px; font-family:inherit; font-weight:900;
+    font-size:16px; padding:15px 18px; cursor:pointer; user-select:none;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:linear-gradient(180deg, var(--gold), var(--gold-deep)); color:var(--plum-deep); box-shadow:0 8px 18px rgba(217,138,31,.4);}
+  .btn-primary:disabled{ opacity:.4; }
+  .btn-ghost{ background:transparent; color:var(--plum-deep); border:2px solid var(--plum); }
+  .btn-plum{ background:var(--plum); color:#fff; box-shadow:0 8px 18px rgba(91,42,134,.35); }
+
+  .spacer{ flex:1; }
+  .foot-actions{ margin-top:18px; display:flex; flex-direction:column; gap:10px; }
+
+  /* ---- game screen ---- */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .pill{
+    background:#fff; border:1px solid var(--line); border-radius:999px;
+    padding:7px 14px; font-size:12px; font-weight:700; color:var(--plum-deep);
+    display:flex; align-items:center; gap:6px;
+  }
+  .pill b{ font-size:15px; }
+
+  .stage{
+    position:relative;
+    background: linear-gradient(180deg, #fff, var(--paper-2));
+    border-radius: var(--radius-lg);
+    border:1px solid var(--line);
+    box-shadow: var(--shadow);
+    padding:22px 18px 18px;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:300px;
+  }
+  .turn-flag{
+    font-size:13px; font-weight:700; color:#fff; background:var(--plum);
+    padding:6px 16px; border-radius:999px; margin-bottom:14px;
+  }
+  .card-wrap{ width:200px; height:200px; perspective:1000px; margin-bottom:6px; }
+  .card-flip{
+    width:100%; height:100%; position:relative; transform-style:preserve-3d;
+    transition: transform .55s cubic-bezier(.2,.8,.3,1.2);
+  }
+  .card-flip.flipped{ transform: rotateY(180deg); }
+  .card-face{
+    position:absolute; inset:0; border-radius:22px; backface-visibility:hidden;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 20px rgba(43,33,66,.25);
+  }
+  .card-back{
+    background: repeating-linear-gradient(135deg, var(--plum) 0 10px, var(--plum-deep) 10px 20px);
+    border:4px solid #fff;
+  }
+  .card-back::after{ content:"?"; font-size:60px; font-weight:900; color:rgba(255,255,255,.85); }
+  .card-front{ background:#fff; transform: rotateY(180deg); border:4px solid #fff; overflow:hidden; }
+  .card-front svg{ width:88%; height:88%; }
+
+  .creature-name-tag{
+    margin-top:6px; font-size:17px; font-weight:900; color:var(--plum-deep);
+    min-height:24px; text-align:center;
+  }
+
+  .stage-action{ width:100%; margin-top:14px; }
+
+  .inline-form{ width:100%; display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+  .inline-form .row{ display:flex; gap:8px; }
+  .inline-form .row input{ flex:1; }
+  .hint{ font-size:12px; color:var(--ink); opacity:.6; text-align:center; margin-top:2px; }
+
+  .buzz-grid{ width:100%; display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:14px; }
+  .buzz-btn{
+    padding:16px 8px; border-radius:18px; border:none; color:#fff; font-family:inherit;
+    font-weight:900; font-size:15px; box-shadow:0 8px 14px rgba(0,0,0,.18);
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .buzz-btn:disabled{ opacity:.32; }
+  .buzz-btn small{ font-weight:700; font-size:11px; opacity:.9; }
+
+  .scoreboard{ margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+  .score-row{
+    display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
+    border-radius:14px; padding:9px 12px;
+  }
+  .score-row .name{ flex:1; font-weight:700; font-size:14px; }
+  .score-row .cnt{ font-weight:900; font-size:16px; color:var(--plum-deep); }
+  .score-row.leader{ border-color:var(--gold-deep); background: rgba(242,169,59,.14); }
+
+  .toast{
+    position:fixed; left:50%; top:18px; transform:translateX(-50%) translateY(-20px);
+    background:var(--ink); color:#fff; padding:11px 20px; border-radius:999px; font-weight:700;
+    font-size:14px; opacity:0; transition: all .3s ease; pointer-events:none; z-index:50; white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.bad{ background:var(--coral); }
+  .toast.good{ background:var(--grass); }
+
+  .result-list{ display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+  .result-row{
+    display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px;
+    padding:12px 14px; border:1px solid var(--line);
+  }
+  .result-row .rank{ font-size:20px; font-weight:900; width:30px; color:var(--plum-deep);}
+  .result-row.first{ background: linear-gradient(90deg, rgba(242,169,59,.22), transparent); border-color:var(--gold-deep); }
+  .result-row .name{ flex:1; font-weight:700; }
+  .result-row .cnt{ font-weight:900; font-size:18px; }
+
+  .named-list{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .named-chip{ background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--ink); opacity:.8;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ONLINE ENTRY SCREEN -->
+  <section class="screen active" id="screen-online-entry">
+    <h1 class="title">なんじゃこれ？</h1>
+    <p class="subtitle">はじめて見る生きものに名前をつけて、同じ子が出たら誰よりも早く名前を叫べ。部屋を作って合言葉を共有するか、もらった合言葉で入室しよう。</p>
+
+    <div class="card-panel">
+      <label class="field-label">あなたのなまえ</label>
+      <input class="text-input" id="onlineNameInput" placeholder="プレイヤー名" maxlength="8">
+    </div>
+
+    <div class="card-panel">
+      <div class="seg" id="onlineTab">
+        <button data-v="create" class="active" type="button">部屋を作る</button>
+        <button data-v="join" type="button">部屋に入る</button>
+      </div>
+
+      <div id="onlineCreatePane" style="margin-top:14px;">
+        <label class="field-label">生きものの数</label>
+        <div class="seg" id="onlineSpeciesSeg">
+          <button data-v="8" type="button">8種・短め</button>
+          <button data-v="12" class="active" type="button">12種・ふつう</button>
+          <button data-v="16" type="button">16種・長め</button>
+        </div>
+      </div>
+      <div id="onlineJoinPane" style="margin-top:14px; display:none;">
+        <label class="field-label">部屋コード</label>
+        <input class="text-input" id="onlineCodeInput" placeholder="例：AB3D" maxlength="4" style="text-transform:uppercase; letter-spacing:.12em; font-weight:900;">
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="foot-actions">
+      <button class="btn btn-primary" id="btnOnlineGo">部屋を作る</button>
+    </div>
+  </section>
+
+  <!-- ONLINE LOBBY SCREEN -->
+  <section class="screen" id="screen-online-lobby">
+    <h1 class="title">部屋であつまろう</h1>
+    <p class="subtitle">下の合言葉をみんなに伝えて、部屋に入ってもらおう。</p>
+
+    <div class="card-panel" style="text-align:center;">
+      <label class="field-label" style="text-align:center;">合言葉</label>
+      <div id="roomCodeDisplay" style="font-size:40px; font-weight:900; letter-spacing:.14em; color:var(--plum-deep);">----</div>
+      <div class="hint" id="copyHint">タップしてコピー</div>
+    </div>
+
+    <div class="card-panel">
+      <label class="field-label">あつまっている人 <span id="lobbyCount">(0人)</span></label>
+      <div class="scoreboard" id="lobbyPlayerList"></div>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="foot-actions">
+      <button class="btn btn-primary" id="btnOnlineStart" disabled>ゲーム開始（2人以上）</button>
+      <button class="btn btn-ghost" id="btnLobbyLeave">部屋を出る</button>
+    </div>
+  </section>
+
+  <!-- ONLINE GAME SCREEN -->
+  <section class="screen" id="screen-online-game">
+    <div class="topbar">
+      <div class="pill">山札 <b id="oDeckCount">48</b></div>
+      <div class="pill">場のカード <b id="oPileCount">0</b></div>
+    </div>
+
+    <div class="stage">
+      <div class="turn-flag" id="oTurnFlag">たろう の番</div>
+
+      <div class="card-wrap">
+        <div class="card-flip" id="oCardFlip">
+          <div class="card-face card-back"></div>
+          <div class="card-face card-front" id="oCardFront"></div>
+        </div>
+      </div>
+      <div class="creature-name-tag" id="oCreatureNameTag"></div>
+
+      <div class="stage-action" id="oStageAction"></div>
+    </div>
+
+    <div class="scoreboard" id="oScoreboard"></div>
+    <div class="named-list" id="oNamedList"></div>
+    <div class="foot-actions" style="margin-top:16px;">
+      <button class="btn btn-ghost" id="btnOnlineGameLeave">部屋を出る</button>
+    </div>
+  </section>
+
+  <!-- ONLINE RESULT SCREEN -->
+  <section class="screen" id="screen-online-result">
+    <h1 class="title">けっか発表！</h1>
+    <p class="subtitle">全部のカードをめくり終わりました。</p>
+    <div class="result-list" id="oResultList"></div>
+    <div class="spacer"></div>
+    <div class="foot-actions">
+      <button class="btn btn-primary" id="btnOnlineReplay">同じ部屋でもう一度</button>
+      <button class="btn btn-ghost" id="btnOnlineResultLeave">部屋を出る</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!--
+  ============================================================
+  Firebase Realtime Database 設定
+  1. https://console.firebase.google.com/ でプロジェクトを作成
+  2. 左メニューの「Realtime Database」を作成（テストモードでOK）
+  3. プロジェクト設定 → 全般 → 「ウェブアプリを追加」して
+     表示される firebaseConfig の値を、下の FIREBASE_CONFIG にコピー
+  4. Realtime Database のルールは、最低限このゲーム専用にするなら
+     以下のような簡易ルールで十分です（誰でも rooms/ 配下を読み書き可）:
+       {
+         "rules": {
+           "rooms": { ".read": true, ".write": true }
+         }
+       }
+     公開する場合は用途に応じてルールを厳しくしてください。
+  ============================================================
+-->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDNGG52gMeAQ0RgSZNrL-8MDvNiJQeVhOU",
+    authDomain: "nanja-f2ec2.firebaseapp.com",
+    databaseURL: "https://nanja-f2ec2-default-rtdb.firebaseio.com",
+    projectId: "nanja-f2ec2",
+    storageBucket: "nanja-f2ec2.firebasestorage.app",
+    messagingSenderId: "1062830597285",
+    appId: "1:1062830597285:web:6f62e90eecaf5669e0194c"
+  };
+  firebase.initializeApp(FIREBASE_CONFIG);
+  var db = firebase.database();
+</script>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- utils ---------- */
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr, rng){
+    for(var i=arr.length-1;i>0;i--){
+      var j = Math.floor(rng()*(i+1));
+      var tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp;
+    }
+    return arr;
+  }
+  function hsl(h,s,l){ return 'hsl('+Math.round(h)+', '+s+'%, '+l+'%)'; }
+
+  function catmullRomPath(points){
+    var n = points.length;
+    var d = 'M '+points[0][0].toFixed(1)+' '+points[0][1].toFixed(1)+' ';
+    for(var i=0;i<n;i++){
+      var p0 = points[(i-1+n)%n];
+      var p1 = points[i];
+      var p2 = points[(i+1)%n];
+      var p3 = points[(i+2)%n];
+      var cp1x = p1[0] + (p2[0]-p0[0])/6;
+      var cp1y = p1[1] + (p2[1]-p0[1])/6;
+      var cp2x = p2[0] - (p3[0]-p1[0])/6;
+      var cp2y = p2[1] - (p3[1]-p1[1])/6;
+      d += 'C '+cp1x.toFixed(1)+' '+cp1y.toFixed(1)+', '+cp2x.toFixed(1)+' '+cp2y.toFixed(1)+', '+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' ';
+    }
+    return d+'Z';
+  }
+
+  function roundBlobPoints(cx,cy,baseR,bumps,jitter,rng){
+    var pts=[];
+    for(var i=0;i<bumps;i++){
+      var ang=(i/bumps)*Math.PI*2;
+      var r = baseR*(1-jitter/2+rng()*jitter);
+      pts.push([cx+Math.cos(ang)*r, cy+Math.sin(ang)*r*0.94]);
+    }
+    return pts;
+  }
+  function polygonPath(points){
+    var d='M '+points[0][0].toFixed(1)+' '+points[0][1].toFixed(1)+' ';
+    for(var i=1;i<points.length;i++){ d+='L '+points[i][0].toFixed(1)+' '+points[i][1].toFixed(1)+' '; }
+    return d+'Z';
+  }
+  function spikyPoints(cx,cy,baseR,spikes,rng){
+    var pts=[]; var n=spikes*2;
+    for(var i=0;i<n;i++){
+      var ang=(i/n)*Math.PI*2;
+      var r=(i%2===0)?baseR*(0.95+rng()*0.15):baseR*(0.5+rng()*0.15);
+      pts.push([cx+Math.cos(ang)*r, cy+Math.sin(ang)*r*0.94]);
+    }
+    return pts;
+  }
+  function ghostPath(cx,cy,rng){
+    var r=56, top=cy-8, leftX=cx-r, rightX=cx+r, bottomY=cy+56, scallops=3;
+    var segW=(2*r)/scallops;
+    var d='M '+leftX+' '+top+' A '+r+' '+r+' 0 0 1 '+rightX+' '+top+' L '+rightX+' '+(bottomY-16)+' ';
+    for(var i=0;i<scallops;i++){
+      var xStart=rightX-i*segW, xMid=xStart-segW/2, xEnd=xStart-segW;
+      d+='Q '+xMid+' '+(bottomY+(i%2===0?8:-8))+', '+xEnd+' '+(bottomY-16)+' ';
+    }
+    d+='L '+leftX+' '+top+' Z';
+    return d;
+  }
+  function hornsPath(cx,cy,baseR,color,rng){
+    var d='';
+    for(var i=0;i<2;i++){
+      var hx=cx+(i===0?-1:1)*20;
+      var topX=hx+(i===0?-14:14), topY=cy-baseR-26;
+      d+='<path d="M '+(hx-6)+' '+(cy-baseR+16)+' Q '+topX+' '+topY+' '+(hx+10)+' '+(cy-baseR+2)+' Q '+hx+' '+(cy-baseR+10)+' '+(hx-6)+' '+(cy-baseR+16)+' Z" fill="'+color+'"/>';
+    }
+    return d;
+  }
+  function earsLongPath(cx,cy,baseR,body,dark,rng){
+    var d=''; var droop=rng()>0.5;
+    for(var i=0;i<2;i++){
+      var ex=cx+(i===0?-18:18), dir=i===0?-1:1;
+      if(droop){
+        d+='<path d="M '+(ex-9)+' '+(cy-baseR+10)+' Q '+(ex+dir*40)+' '+cy+', '+(ex+dir*14)+' '+(cy+baseR-6)+' Q '+(ex+dir*4)+' '+cy+', '+(ex+9)+' '+(cy-baseR+10)+' Z" fill="'+body+'" stroke="'+dark+'" stroke-width="3"/>';
+      } else {
+        d+='<path d="M '+(ex-9)+' '+(cy-baseR+14)+' Q '+(ex+dir*10)+' '+(cy-baseR-64)+', '+(ex+dir*2)+' '+(cy-baseR-66)+' Q '+(ex-dir*6)+' '+(cy-baseR-40)+', '+(ex+9)+' '+(cy-baseR+14)+' Z" fill="'+body+'" stroke="'+dark+'" stroke-width="3"/>';
+      }
+    }
+    return d;
+  }
+  function earsCatPath(cx,cy,baseR,body,dark,rng){
+    var d='';
+    for(var i=0;i<2;i++){
+      var ex=cx+(i===0?-30:30), tipY=cy-baseR-26;
+      d+='<path d="M '+(ex-16)+' '+(cy-baseR+12)+' L '+ex+' '+tipY+' L '+(ex+16)+' '+(cy-baseR+12)+' Z" fill="'+body+'" stroke="'+dark+'" stroke-width="3" stroke-linejoin="round"/>';
+      d+='<path d="M '+(ex-8)+' '+(cy-baseR+8)+' L '+ex+' '+(tipY+14)+' L '+(ex+8)+' '+(cy-baseR+8)+' Z" fill="'+dark+'" opacity="0.5"/>';
+    }
+    return d;
+  }
+  function tailPath(cx,cy,baseR,dark,rng){
+    var side=rng()>0.5?1:-1;
+    var sx=cx+side*baseR*0.8, sy=cy+baseR*0.5;
+    return '<path d="M '+sx+' '+sy+' Q '+(sx+side*46)+' '+(sy+6)+', '+(sx+side*40)+' '+(sy-38)+' Q '+(sx+side*36)+' '+(sy-58)+', '+(sx+side*18)+' '+(sy-50)+'" stroke="'+dark+'" stroke-width="9" fill="none" stroke-linecap="round"/>';
+  }
+  function whiskers(cx,cy,dark){
+    var d=''; var y=cy+26;
+    [-1,1].forEach(function(side){
+      for(var i=0;i<2;i++){
+        var yy=y-6+i*10;
+        d+='<line x1="'+(cx+side*20)+'" y1="'+yy+'" x2="'+(cx+side*44)+'" y2="'+(yy-2+i*4)+'" stroke="'+dark+'" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>';
+      }
+    });
+    return d;
+  }
+  function finsPath(cx,cy,baseR,color,rng){
+    var d='';
+    [-1,1].forEach(function(side){
+      var ex=cx+side*(baseR+6), ey=cy;
+      d+='<path d="M '+ex+' '+(ey-14)+' Q '+(ex+side*20)+' '+ey+', '+ex+' '+(ey+14)+' Q '+(ex+side*6)+' '+ey+', '+ex+' '+(ey-14)+' Z" fill="'+color+'" opacity="0.85"/>';
+    });
+    return d;
+  }
+  function normalEyesMouth(cx,cy,dark,rng){
+    var eyeDX=14+rng()*7, eyeY=cy-4+rng()*8, eyeR=12+rng()*4, pupilOff=(rng()-0.5)*4;
+    var mouthType=rng(); var mouth;
+    if(mouthType>0.66) mouth='<path d="M '+(cx-14)+' '+(cy+26)+' Q '+cx+' '+(cy+42)+' '+(cx+14)+' '+(cy+26)+'" stroke="'+dark+'" stroke-width="4" fill="none" stroke-linecap="round"/>';
+    else if(mouthType>0.33) mouth='<ellipse cx="'+cx+'" cy="'+(cy+28)+'" rx="9" ry="7" fill="'+dark+'"/>';
+    else mouth='<path d="M '+(cx-12)+' '+(cy+30)+' Q '+cx+' '+(cy+20)+' '+(cx+12)+' '+(cy+30)+'" stroke="'+dark+'" stroke-width="4" fill="none" stroke-linecap="round"/>';
+    return '<circle cx="'+(cx-eyeDX)+'" cy="'+eyeY+'" r="'+eyeR+'" fill="#fff"/>'+
+      '<circle cx="'+(cx+eyeDX)+'" cy="'+eyeY+'" r="'+eyeR+'" fill="#fff"/>'+
+      '<circle cx="'+(cx-eyeDX+pupilOff)+'" cy="'+(eyeY+2)+'" r="'+(eyeR*0.5)+'" fill="#2B2142"/>'+
+      '<circle cx="'+(cx+eyeDX+pupilOff)+'" cy="'+(eyeY+2)+'" r="'+(eyeR*0.5)+'" fill="#2B2142"/>'+
+      mouth;
+  }
+  function tripleEyes(cx,cy){
+    var r=10, d='';
+    var positions=[[cx-20,cy-2],[cx+20,cy-2],[cx,cy-24]];
+    positions.forEach(function(pos){
+      d+='<circle cx="'+pos[0]+'" cy="'+pos[1]+'" r="'+r+'" fill="#fff"/>';
+      d+='<circle cx="'+pos[0]+'" cy="'+(pos[1]+2)+'" r="'+(r*0.5)+'" fill="#2B2142"/>';
+    });
+    d+='<ellipse cx="'+cx+'" cy="'+(cy+26)+'" rx="8" ry="6" fill="#2B2142"/>';
+    return d;
+  }
+
+  function creatureSVG(seed){
+    var rng = mulberry32(seed*99991+17);
+    var archetype = seed % 6;
+    var hue = (seed*137.508) % 360;
+    var sat = 55 + rng()*25;
+    var light = 52 + rng()*14;
+    var body = hsl(hue, sat, light);
+    var bodyDark = hsl(hue, Math.min(sat+8,90), Math.max(light-24,20));
+    var accentHue = (hue+140+rng()*60)%360;
+    var accent = hsl(accentHue, 65, 55);
+    var cx=100, cy=112;
+
+    var bodyPath, back='', front='', eyeOverride=null;
+    switch(archetype){
+      case 0: // ふわふわ
+        bodyPath = catmullRomPath(roundBlobPoints(cx,cy,58,10,0.16,rng));
+        for(var i=0;i<3;i++){
+          var a=-Math.PI/2+(i-1)*0.55;
+          var tx=cx+Math.cos(a)*56, ty=cy+Math.sin(a)*54;
+          back += '<path d="M '+(tx-9)+' '+(ty+6)+' Q '+tx+' '+(ty-14)+' '+(tx+9)+' '+(ty+6)+' Z" fill="'+bodyDark+'"/>';
+        }
+        break;
+      case 1: // おばけ
+        bodyPath = ghostPath(cx,cy,rng);
+        front += '<path d="M '+(cx-58)+' '+(cy+10)+' Q '+(cx-72)+' '+(cy+2)+' '+(cx-66)+' '+(cy-10)+'" stroke="'+bodyDark+'" stroke-width="8" fill="none" stroke-linecap="round"/>';
+        front += '<path d="M '+(cx+58)+' '+(cy+10)+' Q '+(cx+72)+' '+(cy+2)+' '+(cx+66)+' '+(cy-10)+'" stroke="'+bodyDark+'" stroke-width="8" fill="none" stroke-linecap="round"/>';
+        break;
+      case 2: // とんがりオニ
+        bodyPath = polygonPath(spikyPoints(cx,cy,58,7+Math.floor(rng()*3),rng));
+        back += hornsPath(cx,cy,58,bodyDark,rng);
+        break;
+      case 3: // みみなが
+        bodyPath = catmullRomPath(roundBlobPoints(cx,cy,52,9,0.09,rng));
+        back += earsLongPath(cx,cy,52,body,bodyDark,rng);
+        break;
+      case 4: // ねこ
+        bodyPath = catmullRomPath(roundBlobPoints(cx,cy,54,9,0.1,rng));
+        back += earsCatPath(cx,cy,54,body,bodyDark,rng);
+        front += tailPath(cx,cy,54,bodyDark,rng);
+        front += whiskers(cx,cy,bodyDark);
+        break;
+      case 5: // みつめ
+        bodyPath = catmullRomPath(roundBlobPoints(cx,cy,56,9,0.08,rng));
+        back += finsPath(cx,cy,56,accent,rng);
+        eyeOverride = 'triple';
+        break;
+    }
+
+    var pattern=''; var patternType=rng();
+    if(patternType>0.66){
+      var n=2+Math.floor(rng()*3);
+      for(var p=0;p<n;p++){
+        var sa=rng()*Math.PI*2, sr=rng()*38;
+        var sx=cx+Math.cos(sa)*sr, sy=cy+10+Math.sin(sa)*sr*0.8;
+        pattern += '<circle cx="'+sx.toFixed(1)+'" cy="'+sy.toFixed(1)+'" r="'+(4+rng()*7).toFixed(1)+'" fill="'+accent+'" opacity="0.75"/>';
+      }
+    } else if(patternType>0.33){
+      pattern += '<ellipse cx="'+cx+'" cy="'+(cy+22)+'" rx="26" ry="20" fill="'+accent+'" opacity="0.5"/>';
+    }
+
+    var eyesMouth = eyeOverride==='triple' ? tripleEyes(cx,cy) : normalEyesMouth(cx,cy,bodyDark,rng);
+
+    return '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">'+
+      back+
+      '<path d="'+bodyPath+'" fill="'+body+'" stroke="'+bodyDark+'" stroke-width="3" stroke-linejoin="round"/>'+
+      pattern+
+      front+
+      eyesMouth+
+      '</svg>';
+  }
+
+  /* ---------- state ---------- */
+  var PLAYER_COLORS = ['#E85D5D','#3E8E5A','#5B2A86','#F2A93B','#2F8FBF','#C0567A'];
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+  }
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  }
+  function showToast(msg, kind){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (kind ? ' '+kind : '');
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(function(){ t.classList.remove('show'); }, 1600);
+  }
+  function normalize(s){
+    return s.replace(/\s+/g,'').toLowerCase();
+  }
+
+  /* ================= ONLINE MODE (Firebase Realtime Database) ================= */
+
+  var CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function genRoomCode(){
+    var c='';
+    for(var i=0;i<4;i++) c += CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
+    return c;
+  }
+  function randomId(){
+    return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+  }
+  function nkey(speciesId){ return 'c'+speciesId; } // named map key (avoids Firebase array-coercion on numeric keys)
+  function roomRef(code){ return db.ref('rooms/'+code); }
+
+  var online = {
+    room: null,
+    myId: null,
+    myName: null,
+    state: null,
+    listenerRef: null,
+    lastEventTs: 0
+  };
+
+  /* ---- entry screen wiring ---- */
+
+  var onlineMode = 'create';
+  document.querySelectorAll('#onlineTab button').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('#onlineTab button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      onlineMode = btn.getAttribute('data-v');
+      document.getElementById('onlineCreatePane').style.display = onlineMode==='create' ? '' : 'none';
+      document.getElementById('onlineJoinPane').style.display = onlineMode==='join' ? '' : 'none';
+      document.getElementById('btnOnlineGo').textContent = onlineMode==='create' ? '部屋を作る' : '部屋に入る';
+    };
+  });
+  var onlineSpeciesCount = 12;
+  document.querySelectorAll('#onlineSpeciesSeg button').forEach(function(btn){
+    btn.onclick = function(){
+      document.querySelectorAll('#onlineSpeciesSeg button').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      onlineSpeciesCount = parseInt(btn.getAttribute('data-v'),10);
+    };
+  });
+
+  document.getElementById('btnOnlineGo').onclick = function(){
+    var name = document.getElementById('onlineNameInput').value.trim();
+    if(!name){ showToast('なまえを入力してね', 'bad'); return; }
+    if(onlineMode==='create') createRoom(name);
+    else joinRoom(name, document.getElementById('onlineCodeInput').value.trim().toUpperCase());
+  };
+
+  function createRoom(name){
+    var btn = document.getElementById('btnOnlineGo');
+    btn.disabled = true;
+    var code = genRoomCode();
+    var myId = randomId();
+    var initial = {
+      phase: 'lobby',
+      speciesCount: onlineSpeciesCount,
+      players: [{ id: myId, name: name, colorIdx: 0, pile: [] }],
+      deck: [], named: {}, centerPile: [], currentCard: null,
+      flipperIndex: 0, buzzedBy: null, lockedOut: [], revealName: '',
+      lastEvent: null, createdAt: Date.now()
+    };
+    roomRef(code).set(initial).then(function(){
+      btn.disabled = false;
+      online.room = code; online.myId = myId; online.myName = name; online.state = initial;
+      enterLobby();
+    }).catch(function(err){
+      btn.disabled = false;
+      showToast('部屋を作れませんでした。設定を確認してください', 'bad');
+      console.error(err);
+    });
+  }
+
+  function joinRoom(name, code){
+    if(code.length!==4){ showToast('部屋コードは4文字です', 'bad'); return; }
+    var btn = document.getElementById('btnOnlineGo');
+    btn.disabled = true;
+    var myId = randomId();
+    roomRef(code).get().then(function(snap){
+      if(!snap.exists()){ throw {code:'not-found'}; }
+      var st = snap.val();
+      if(st.phase!=='lobby'){ throw {code:'started'}; }
+      var players = st.players || [];
+      if(players.length>=6){ throw {code:'full'}; }
+      return roomRef(code).child('players').transaction(function(current){
+        current = current || [];
+        if(current.length>=6) return; // abort
+        current.push({ id: myId, name: name, colorIdx: current.length, pile: [] });
+        return current;
+      });
+    }).then(function(result){
+      if(!result || !result.committed){ throw {code:'full'}; }
+      return roomRef(code).get();
+    }).then(function(snap){
+      btn.disabled = false;
+      online.room = code; online.myId = myId; online.myName = name; online.state = snap.val();
+      enterLobby();
+    }).catch(function(err){
+      btn.disabled = false;
+      var msg = '参加できませんでした。もう一度お試しください';
+      if(err && err.code==='not-found') msg='部屋が見つかりません';
+      else if(err && err.code==='started') msg='すでにゲームが始まっています';
+      else if(err && err.code==='full') msg='部屋がいっぱいです';
+      showToast(msg, 'bad');
+    });
+  }
+
+  function enterLobby(){
+    renderLobby();
+    showScreen('screen-online-lobby');
+    attachRoomListener();
+  }
+
+  function attachRoomListener(){
+    detachRoomListener();
+    online.listenerRef = roomRef(online.room);
+    online.listenerRef.on('value', function(snap){
+      var st = snap.val();
+      if(!st) return;
+      online.state = st;
+      handleStateChange();
+    });
+  }
+  function detachRoomListener(){
+    if(online.listenerRef){ online.listenerRef.off(); online.listenerRef = null; }
+  }
+
+  function handleStateChange(){
+    var st = online.state;
+    if(st.lastEvent && st.lastEvent.ts > online.lastEventTs){
+      online.lastEventTs = st.lastEvent.ts;
+      showToast(st.lastEvent.msg, st.lastEvent.kind);
+    }
+    var activeScreen = document.querySelector('.screen.active');
+    var activeId = activeScreen ? activeScreen.id : '';
+    if(st.phase==='lobby'){
+      renderLobby();
+      if(activeId!=='screen-online-lobby') showScreen('screen-online-lobby');
+    } else if(st.phase==='finished'){
+      renderOnlineResult();
+      if(activeId!=='screen-online-result') showScreen('screen-online-result');
+    } else {
+      renderOnlineGame();
+      if(activeId!=='screen-online-game') showScreen('screen-online-game');
+    }
+  }
+
+  function myPlayer(){
+    if(!online.state || !online.state.players) return null;
+    var found=null;
+    online.state.players.forEach(function(p){ if(p.id===online.myId) found=p; });
+    return found;
+  }
+
+  function renderLobby(){
+    document.getElementById('roomCodeDisplay').textContent = online.room || '----';
+    var st = online.state;
+    var players = (st && st.players) || [];
+    var list = document.getElementById('lobbyPlayerList');
+    list.innerHTML = '';
+    players.forEach(function(p){
+      var row = document.createElement('div');
+      row.className='score-row';
+      row.innerHTML = '<div class="swatch" style="width:22px;height:22px;background:'+PLAYER_COLORS[p.colorIdx%PLAYER_COLORS.length]+'"></div>'+
+        '<div class="name">'+escapeHtml(p.name)+(p.id===online.myId?'（あなた）':'')+'</div>';
+      list.appendChild(row);
+    });
+    document.getElementById('lobbyCount').textContent = '('+players.length+'人)';
+    var startBtn = document.getElementById('btnOnlineStart');
+    startBtn.disabled = players.length<2;
+  }
+
+  document.getElementById('roomCodeDisplay').onclick = function(){
+    if(!online.room) return;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(online.room).then(function(){
+        document.getElementById('copyHint').textContent = 'コピーしました！';
+        setTimeout(function(){ document.getElementById('copyHint').textContent='タップしてコピー'; }, 1500);
+      }).catch(function(){});
+    }
+  };
+
+  document.getElementById('btnOnlineStart').onclick = function(){
+    var st = online.state;
+    if(!st || st.phase!=='lobby' || (st.players||[]).length<2) return;
+    var deck = [];
+    for(var s=0;s<st.speciesCount;s++){ for(var c=0;c<4;c++) deck.push(s); }
+    shuffle(deck, mulberry32(Date.now() & 0xffffffff));
+    roomRef(online.room).update({
+      deck: deck, named:{}, centerPile:[], currentCard:null, flipperIndex:0,
+      buzzedBy:null, lockedOut:[], revealName:'', phase:'idle',
+      lastEvent:{ msg:'ゲームスタート！', kind:'good', ts:Date.now() }
+    });
+  };
+
+  function leaveOnline(){
+    detachRoomListener();
+    online.room=null; online.myId=null; online.state=null; online.lastEventTs=0;
+    showScreen('screen-online-entry');
+  }
+  document.getElementById('btnLobbyLeave').onclick = leaveOnline;
+  document.getElementById('btnOnlineGameLeave').onclick = function(){
+    if(confirm('部屋を出ますか？他の人はそのまま続けられます。')) leaveOnline();
+  };
+  document.getElementById('btnOnlineResultLeave').onclick = leaveOnline;
+
+  function renderOnlineGame(){
+    var st = online.state;
+    document.getElementById('oDeckCount').textContent = (st.deck||[]).length;
+    document.getElementById('oPileCount').textContent = (st.centerPile||[]).length;
+
+    var flipper = st.players[st.flipperIndex];
+    var iAmFlipper = flipper && flipper.id===online.myId;
+    document.getElementById('oTurnFlag').textContent = flipper.name + ' の番' + (iAmFlipper ? '（あなた）':'');
+
+    var flipEl = document.getElementById('oCardFlip');
+    var front = document.getElementById('oCardFront');
+    if(st.currentCard!==null && st.currentCard!==undefined){
+      front.innerHTML = creatureSVG(st.currentCard);
+      flipEl.classList.add('flipped');
+    } else {
+      flipEl.classList.remove('flipped');
+      front.innerHTML = '';
+    }
+    document.getElementById('oCreatureNameTag').textContent = st.revealName || '';
+
+    var action = document.getElementById('oStageAction');
+    var me = myPlayer();
+    var named = st.named || {};
+    var lockedOutList = st.lockedOut || [];
+
+    if(st.phase==='idle'){
+      if(iAmFlipper){
+        action.innerHTML = '<button class="btn btn-primary" id="oBtnFlip" style="width:100%;">カードをめくる</button>';
+        document.getElementById('oBtnFlip').onclick = onlineFlip;
+      } else {
+        action.innerHTML = '<div class="hint">'+escapeHtml(flipper.name)+' がめくるのを待っています…</div>';
+      }
+    } else if(st.phase==='naming'){
+      if(iAmFlipper){
+        action.innerHTML =
+          '<div class="hint">はじめて見る生きもの！ 名前をつけよう</div>'+
+          '<div class="inline-form">'+
+            '<div class="row"><input class="text-input" id="oNameFormInput" placeholder="例：ぽんぽこナス" maxlength="12"></div>'+
+            '<button class="btn btn-primary" id="oBtnConfirmName">名前をつける</button>'+
+          '</div>';
+        var input = document.getElementById('oNameFormInput');
+        setTimeout(function(){ input.focus(); }, 200);
+        function submit(){ onlineSubmitName(input.value.trim()); }
+        document.getElementById('oBtnConfirmName').onclick = submit;
+        input.addEventListener('keydown', function(e){ if(e.key==='Enter') submit(); });
+      } else {
+        action.innerHTML = '<div class="hint">'+escapeHtml(flipper.name)+' が名前を考えています…</div>';
+      }
+    } else if(st.phase==='buzzing'){
+      if(st.buzzedBy){
+        if(st.buzzedBy===online.myId){
+          action.innerHTML =
+            '<div class="hint">正解を入力！</div>'+
+            '<div class="inline-form">'+
+              '<div class="row"><input class="text-input" id="oAnswerInput" placeholder="名前を入力"></div>'+
+              '<button class="btn btn-primary" id="oBtnSubmitAnswer">これで解答！</button>'+
+            '</div>';
+          var ainput = document.getElementById('oAnswerInput');
+          setTimeout(function(){ ainput.focus(); }, 150);
+          function asubmit(){ onlineSubmitAnswer(ainput.value.trim()); }
+          document.getElementById('oBtnSubmitAnswer').onclick = asubmit;
+          ainput.addEventListener('keydown', function(e){ if(e.key==='Enter') asubmit(); });
+        } else {
+          var buzzer = st.players.filter(function(p){return p.id===st.buzzedBy;})[0];
+          action.innerHTML = '<div class="hint">'+(buzzer?escapeHtml(buzzer.name):'だれか')+' が解答中…</div>';
+        }
+      } else if(me && lockedOutList.indexOf(me.id)===-1){
+        action.innerHTML = '<div class="hint">前に出た生きもの！ 名前が分かったら早押し</div>'+
+          '<button class="btn btn-primary" id="oBtnBuzz" style="width:100%; font-size:20px; padding:22px;">はやおし！</button>';
+        document.getElementById('oBtnBuzz').onclick = onlineBuzz;
+      } else {
+        action.innerHTML = '<div class="hint">はずれ済み…他のプレイヤーを待っています</div>';
+      }
+    }
+
+    var wrap = document.getElementById('oScoreboard');
+    wrap.innerHTML = '';
+    var max = Math.max.apply(null, st.players.map(function(p){return p.pile.length;}).concat([0]));
+    st.players.forEach(function(p){
+      var row = document.createElement('div');
+      row.className='score-row'+(p.pile.length>0 && p.pile.length===max ? ' leader':'');
+      row.innerHTML = '<div class="swatch" style="width:22px;height:22px;background:'+PLAYER_COLORS[p.colorIdx%PLAYER_COLORS.length]+'"></div>'+
+        '<div class="name">'+escapeHtml(p.name)+(p.id===online.myId?'（あなた）':'')+'</div>'+
+        '<div class="cnt">'+p.pile.length+'枚</div>';
+      wrap.appendChild(row);
+    });
+
+    var namedWrap = document.getElementById('oNamedList');
+    var keys = Object.keys(named);
+    if(keys.length===0){ namedWrap.innerHTML=''; }
+    else {
+      namedWrap.innerHTML = '<div class="hint" style="margin:10px 0 2px;">これまでの名前</div>';
+      var nrow = document.createElement('div');
+      nrow.className='named-list';
+      keys.forEach(function(k){
+        var chip=document.createElement('div');
+        chip.className='named-chip';
+        chip.textContent = named[k];
+        nrow.appendChild(chip);
+      });
+      namedWrap.appendChild(nrow);
+    }
+  }
+
+  function onlineFlip(){
+    var st = online.state;
+    if(!st || st.phase!=='idle') return;
+    var flipper = st.players[st.flipperIndex];
+    if(!flipper || flipper.id!==online.myId) return;
+    var deck = (st.deck||[]).slice();
+    if(deck.length===0) return;
+    var species = deck.pop();
+    var named = st.named || {};
+    var known = Object.prototype.hasOwnProperty.call(named, nkey(species));
+    var updates = {
+      deck: deck, currentCard: species, revealName:'',
+      phase: known ? 'buzzing' : 'naming'
+    };
+    if(known){ updates.buzzedBy = null; updates.lockedOut = []; }
+    roomRef(online.room).update(updates);
+  }
+
+  function onlineSubmitName(val){
+    var st = online.state;
+    if(!st || st.phase!=='naming') return;
+    var flipper = st.players[st.flipperIndex];
+    if(!flipper || flipper.id!==online.myId) return;
+    if(!val) val = 'なんじゃもんじゃ'+(st.currentCard+1)+'号';
+    var centerPile = (st.centerPile||[]).concat([st.currentCard]);
+    var nextFlipper = (st.flipperIndex+1) % st.players.length;
+    var deckEmpty = (st.deck||[]).length===0;
+    var updates = {};
+    updates['named/'+nkey(st.currentCard)] = val;
+    updates.centerPile = centerPile;
+    updates.currentCard = null;
+    updates.revealName = val;
+    updates.flipperIndex = nextFlipper;
+    updates.phase = deckEmpty ? 'finished' : 'idle';
+    updates.lastEvent = { msg: val+' と命名！', kind:'good', ts: Date.now() };
+    roomRef(online.room).update(updates);
+  }
+
+  function onlineBuzz(){
+    var st = online.state;
+    if(!st || st.phase!=='buzzing' || st.buzzedBy) return;
+    var lockedOutList = st.lockedOut || [];
+    if(lockedOutList.indexOf(online.myId)!==-1) return;
+    roomRef(online.room).child('buzzedBy').transaction(function(current){
+      if(current) return; // someone already claimed it — abort
+      return online.myId;
+    });
+  }
+
+  function onlineSubmitAnswer(val){
+    var st = online.state;
+    if(!st || st.phase!=='buzzing' || st.buzzedBy!==online.myId) return;
+    var named = st.named || {};
+    var correctName = named[nkey(st.currentCard)];
+    var isCorrect = val.length>0 && normalize(val)===normalize(correctName);
+    var mySelf = st.players.filter(function(p){return p.id===online.myId;})[0];
+
+    if(isCorrect){
+      var newPile = (mySelf.pile||[]).concat(st.centerPile||[]).concat([st.currentCard]);
+      var nextFlipper = (st.flipperIndex+1) % st.players.length;
+      var deckEmpty = (st.deck||[]).length===0;
+      var myIndex = st.players.indexOf(mySelf);
+      var updates = {};
+      updates['players/'+myIndex+'/pile'] = newPile;
+      updates.centerPile = [];
+      updates.currentCard = null;
+      updates.revealName = correctName;
+      updates.buzzedBy = null;
+      updates.flipperIndex = nextFlipper;
+      updates.phase = deckEmpty ? 'finished' : 'idle';
+      updates.lastEvent = { msg: mySelf.name+' 正解！ '+newPile.length+'枚もっています', kind:'good', ts: Date.now() };
+      roomRef(online.room).update(updates);
+    } else {
+      var lockedOut = (st.lockedOut||[]).concat([online.myId]);
+      var allLocked = st.players.every(function(p){ return lockedOut.indexOf(p.id)!==-1; });
+      if(allLocked){
+        var nf = (st.flipperIndex+1) % st.players.length;
+        var dEmpty = (st.deck||[]).length===0;
+        roomRef(online.room).update({
+          centerPile: (st.centerPile||[]).concat([st.currentCard]),
+          currentCard: null, revealName: correctName,
+          buzzedBy: null, lockedOut: lockedOut, flipperIndex: nf,
+          phase: dEmpty ? 'finished' : 'idle',
+          lastEvent: { msg:'だれも正解できず…正解は「'+correctName+'」', kind:null, ts: Date.now() }
+        });
+      } else {
+        roomRef(online.room).update({
+          buzzedBy: null, lockedOut: lockedOut,
+          lastEvent: { msg:(mySelf?mySelf.name:'')+' 残念、はずれ！', kind:'bad', ts: Date.now() }
+        });
+      }
+    }
+  }
+
+  function renderOnlineResult(){
+    var st = online.state;
+    var ranked = st.players.slice().sort(function(a,b){ return b.pile.length - a.pile.length; });
+    var wrap = document.getElementById('oResultList');
+    wrap.innerHTML = '';
+    ranked.forEach(function(p, idx){
+      var row = document.createElement('div');
+      row.className = 'result-row' + (idx===0 ? ' first' : '');
+      row.innerHTML = '<div class="rank">'+(idx+1)+'</div>'+
+        '<div class="swatch" style="width:26px;height:26px;background:'+PLAYER_COLORS[p.colorIdx%PLAYER_COLORS.length]+'"></div>'+
+        '<div class="name">'+escapeHtml(p.name)+(p.id===online.myId?'（あなた）':'')+'</div>'+
+        '<div class="cnt">'+p.pile.length+'枚</div>';
+      wrap.appendChild(row);
+    });
+  }
+
+  document.getElementById('btnOnlineReplay').onclick = function(){
+    var st = online.state;
+    if(!st) return;
+    var resetPlayers = st.players.map(function(p){ return Object.assign({}, p, { pile: [] }); });
+    roomRef(online.room).update({
+      players: resetPlayers, phase:'lobby', deck:[], named:{}, centerPile:[],
+      currentCard:null, flipperIndex:0, buzzedBy:null, lockedOut:[], revealName:'',
+      lastEvent:{ msg:'ロビーに戻りました', kind:null, ts:Date.now() }
+    });
+  };
+
+})();
+</script>
+</body>
+</html>
