@@ -702,6 +702,8 @@
     online.listenerRef.on('value', function(snap){
       var st = snap.val();
       if(!st) return;
+      // Firebase does not store empty arrays, so an empty pile comes back missing
+      (st.players || []).forEach(function(p){ if(!p.pile) p.pile = []; });
       online.state = st;
       handleStateChange();
     });
