@@ -197,7 +197,11 @@
   .result-row .cnt{ font-weight:900; font-size:18px; }
 
   .named-list{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
-  .named-chip{ background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--ink); opacity:.8;}
+  .named-chip{ background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--ink); opacity:.8; display:flex; align-items:center; gap:4px;}
+  .named-chip svg{ width:28px; height:28px; flex:none; }
+
+  .countdown{ text-align:center; font-size:14px; font-weight:700; color:var(--coral); margin-bottom:4px; }
+  .countdown b{ font-size:26px; font-weight:900; }
 </style>
 </head>
 <body>
@@ -284,7 +288,6 @@
     </div>
 
     <div class="scoreboard" id="oScoreboard"></div>
-    <div class="named-list" id="oNamedList"></div>
     <div class="foot-actions" style="margin-top:16px;">
       <button class="btn btn-ghost" id="btnOnlineGameLeave">部屋を出る</button>
     </div>
@@ -295,6 +298,7 @@
     <h1 class="title">けっか発表！</h1>
     <p class="subtitle">全部のカードをめくり終わりました。</p>
     <div class="result-list" id="oResultList"></div>
+    <div id="oResultNamed"></div>
     <div class="spacer"></div>
     <div class="foot-actions">
       <button class="btn btn-primary" id="btnOnlineReplay">同じ部屋でもう一度</button>
@@ -594,14 +598,20 @@
   function nkey(speciesId){ return 'c'+speciesId; } // named map key (avoids Firebase array-coercion on numeric keys)
   function roomRef(code){ return db.ref('rooms/'+code); }
 
+  var ANSWER_SECONDS = 10;      // time the buzzer has to answer
+  var TIMEOUT_GRACE_MS = 3000;  // extra wait before other players time out a buzzer who left
+
   var online = {
     room: null,
     myId: null,
     myName: null,
     state: null,
     listenerRef: null,
-    lastEventTs: 0
+    lastEventTs: 0,
+    serverOffset: 0,
+    timedOutAt: null
   };
+  db.ref('.info/serverTimeOffset').on('value', function(snap){ online.serverOffset = snap.val() || 0; });
 
   /* ---- entry screen wiring ---- */
 
@@ -775,7 +785,7 @@
     shuffle(deck, mulberry32(Date.now() & 0xffffffff));
     roomRef(online.room).update({
       deck: deck, named:{}, centerPile:[], currentCard:null, flipperIndex:0,
-      buzzedBy:null, lockedOut:[], revealName:'', phase:'idle',
+      buzzedBy:null, buzzedAt:null, lockedOut:[], revealName:'', phase:'idle',
       lastEvent:{ msg:'ゲームスタート！', kind:'good', ts:Date.now() }
     });
   };
@@ -813,7 +823,6 @@
 
     var action = document.getElementById('oStageAction');
     var me = myPlayer();
-    var named = st.named || {};
     var lockedOutList = st.lockedOut || [];
 
     if(st.phase==='idle'){
@@ -843,6 +852,7 @@
       if(st.buzzedBy){
         if(st.buzzedBy===online.myId){
           action.innerHTML =
+            '<div class="countdown">あと <b class="oCountdown">'+ANSWER_SECONDS+'</b> 秒</div>'+
             '<div class="hint">正解を入力！</div>'+
             '<div class="inline-form">'+
               '<div class="row"><input class="text-input" id="oAnswerInput" placeholder="名前を入力"></div>'+
@@ -855,7 +865,8 @@
           ainput.addEventListener('keydown', function(e){ if(e.key==='Enter') asubmit(); });
         } else {
           var buzzer = st.players.filter(function(p){return p.id===st.buzzedBy;})[0];
-          action.innerHTML = '<div class="hint">'+(buzzer?escapeHtml(buzzer.name):'だれか')+' が解答中…</div>';
+          action.innerHTML = '<div class="countdown">あと <b class="oCountdown">'+ANSWER_SECONDS+'</b> 秒</div>'+
+            '<div class="hint">'+(buzzer?escapeHtml(buzzer.name):'だれか')+' が解答中…</div>';
         }
       } else if(me && lockedOutList.indexOf(me.id)===-1){
         action.innerHTML = '<div class="hint">前に出た生きもの！ 名前が分かったら早押し</div>'+
@@ -878,21 +889,58 @@
       wrap.appendChild(row);
     });
 
-    var namedWrap = document.getElementById('oNamedList');
-    var keys = Object.keys(named);
-    if(keys.length===0){ namedWrap.innerHTML=''; }
-    else {
-      namedWrap.innerHTML = '<div class="hint" style="margin:10px 0 2px;">これまでの名前</div>';
-      var nrow = document.createElement('div');
-      nrow.className='named-list';
-      keys.forEach(function(k){
-        var chip=document.createElement('div');
-        chip.className='named-chip';
-        chip.textContent = named[k];
-        nrow.appendChild(chip);
-      });
-      namedWrap.appendChild(nrow);
+    updateCountdown();
+  }
+
+  /* ---- answer timer ---- */
+
+  function buzzElapsed(st){
+    if(!st || st.phase!=='buzzing' || !st.buzzedBy || !st.buzzedAt) return null;
+    return Date.now() + online.serverOffset - st.buzzedAt;
+  }
+
+  function updateCountdown(){
+    var st = online.state;
+    var elapsed = buzzElapsed(st);
+    if(elapsed===null) return;
+    var left = Math.max(0, Math.ceil((ANSWER_SECONDS*1000 - elapsed)/1000));
+    document.querySelectorAll('.oCountdown').forEach(function(el){ el.textContent = left; });
+    // The buzzer's own client times out first; others step in after a grace period in case the buzzer left
+    var limit = ANSWER_SECONDS*1000 + (st.buzzedBy===online.myId ? 0 : TIMEOUT_GRACE_MS);
+    if(elapsed >= limit && online.timedOutAt!==st.buzzedAt){
+      online.timedOutAt = st.buzzedAt;
+      onlineTimeout(st.buzzedBy, st.buzzedAt);
     }
+  }
+  setInterval(updateCountdown, 250);
+
+  // Same outcome as a wrong answer: the buzzer is locked out, and if everyone is, the card goes to the pile
+  function missUpdates(st, playerId, msg, kind){
+    var correctName = (st.named || {})[nkey(st.currentCard)];
+    var lockedOut = (st.lockedOut||[]).concat([playerId]);
+    var allLocked = st.players.every(function(p){ return lockedOut.indexOf(p.id)!==-1; });
+    if(allLocked){
+      return {
+        centerPile: (st.centerPile||[]).concat([st.currentCard]),
+        currentCard: null, revealName: correctName,
+        buzzedBy: null, buzzedAt: null, lockedOut: lockedOut,
+        flipperIndex: (st.flipperIndex+1) % st.players.length,
+        phase: (st.deck||[]).length===0 ? 'finished' : 'idle',
+        lastEvent: { msg:'だれも正解できず…正解は「'+correctName+'」', kind:null, ts: Date.now() }
+      };
+    }
+    return {
+      buzzedBy: null, buzzedAt: null, lockedOut: lockedOut,
+      lastEvent: { msg:msg, kind:kind, ts: Date.now() }
+    };
+  }
+
+  function onlineTimeout(playerId, buzzedAt){
+    roomRef(online.room).transaction(function(room){
+      if(!room || room.phase!=='buzzing' || room.buzzedBy!==playerId || room.buzzedAt!==buzzedAt) return;
+      var buzzer = (room.players||[]).filter(function(p){ return p.id===playerId; })[0];
+      return Object.assign(room, missUpdates(room, playerId, (buzzer?buzzer.name+' ':'')+'時間切れ！', 'bad'));
+    });
   }
 
   function onlineFlip(){
@@ -909,7 +957,7 @@
       deck: deck, currentCard: species, revealName:'',
       phase: known ? 'buzzing' : 'naming'
     };
-    if(known){ updates.buzzedBy = null; updates.lockedOut = []; }
+    if(known){ updates.buzzedBy = null; updates.buzzedAt = null; updates.lockedOut = []; }
     roomRef(online.room).update(updates);
   }
 
@@ -941,6 +989,8 @@
     roomRef(online.room).child('buzzedBy').transaction(function(current){
       if(current) return; // someone already claimed it — abort
       return online.myId;
+    }, function(err, committed){
+      if(!err && committed) roomRef(online.room).child('buzzedAt').set(firebase.database.ServerValue.TIMESTAMP);
     });
   }
 
@@ -963,29 +1013,13 @@
       updates.currentCard = null;
       updates.revealName = correctName;
       updates.buzzedBy = null;
+      updates.buzzedAt = null;
       updates.flipperIndex = nextFlipper;
       updates.phase = deckEmpty ? 'finished' : 'idle';
       updates.lastEvent = { msg: mySelf.name+' 正解！ '+newPile.length+'枚もっています', kind:'good', ts: Date.now() };
       roomRef(online.room).update(updates);
     } else {
-      var lockedOut = (st.lockedOut||[]).concat([online.myId]);
-      var allLocked = st.players.every(function(p){ return lockedOut.indexOf(p.id)!==-1; });
-      if(allLocked){
-        var nf = (st.flipperIndex+1) % st.players.length;
-        var dEmpty = (st.deck||[]).length===0;
-        roomRef(online.room).update({
-          centerPile: (st.centerPile||[]).concat([st.currentCard]),
-          currentCard: null, revealName: correctName,
-          buzzedBy: null, lockedOut: lockedOut, flipperIndex: nf,
-          phase: dEmpty ? 'finished' : 'idle',
-          lastEvent: { msg:'だれも正解できず…正解は「'+correctName+'」', kind:null, ts: Date.now() }
-        });
-      } else {
-        roomRef(online.room).update({
-          buzzedBy: null, lockedOut: lockedOut,
-          lastEvent: { msg:(mySelf?mySelf.name:'')+' 残念、はずれ！', kind:'bad', ts: Date.now() }
-        });
-      }
+      roomRef(online.room).update(missUpdates(st, online.myId, (mySelf?mySelf.name:'')+' 残念、はずれ！', 'bad'));
     }
   }
 
@@ -1003,6 +1037,24 @@
         '<div class="cnt">'+p.pile.length+'枚</div>';
       wrap.appendChild(row);
     });
+
+    // Names stay hidden during play; reveal them all once the game is over
+    var named = st.named || {};
+    var namedWrap = document.getElementById('oResultNamed');
+    var keys = Object.keys(named);
+    namedWrap.innerHTML = keys.length ? '<div class="hint" style="margin:18px 0 2px;">登場した生きもの</div>' : '';
+    if(keys.length){
+      var nrow = document.createElement('div');
+      nrow.className = 'named-list';
+      keys.forEach(function(k){
+        var chip = document.createElement('div');
+        chip.className = 'named-chip';
+        chip.innerHTML = creatureSVG(parseInt(k.slice(1), 10));
+        chip.appendChild(document.createTextNode(named[k]));
+        nrow.appendChild(chip);
+      });
+      namedWrap.appendChild(nrow);
+    }
   }
 
   document.getElementById('btnOnlineReplay').onclick = function(){
@@ -1011,7 +1063,7 @@
     var resetPlayers = st.players.map(function(p){ return Object.assign({}, p, { pile: [] }); });
     roomRef(online.room).update({
       players: resetPlayers, phase:'lobby', deck:[], named:{}, centerPile:[],
-      currentCard:null, flipperIndex:0, buzzedBy:null, lockedOut:[], revealName:'',
+      currentCard:null, flipperIndex:0, buzzedBy:null, buzzedAt:null, lockedOut:[], revealName:'',
       lastEvent:{ msg:'ロビーに戻りました', kind:null, ts:Date.now() }
     });
   };
