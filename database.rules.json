@@ -25,6 +25,7 @@
         "currentCard": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 16" },
         "flipperIndex": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 5" },
         "buzzedBy": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "buzzedAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
         "revealName": { ".validate": "newData.isString() && newData.val().length <= 12" },
         "lastEvent": {
           ".validate": "newData.hasChildren(['msg', 'ts'])",
