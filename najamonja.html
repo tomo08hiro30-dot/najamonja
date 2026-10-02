@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>なんじゃこれ？ - なんじゃもんじゃゲーム</title>
+<title>それ、なんて名前？ - 生きもの名づけ早押しゲーム</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -209,7 +209,7 @@
 
   <!-- ONLINE ENTRY SCREEN -->
   <section class="screen active" id="screen-online-entry">
-    <h1 class="title">なんじゃこれ？</h1>
+    <h1 class="title">それ、なんて名前？</h1>
     <p class="subtitle">はじめて見る生きものに名前をつけて、同じ子が出たら誰よりも早く名前を叫べ。部屋を作って合言葉を共有するか、もらった合言葉で入室しよう。</p>
 
     <div class="card-panel">
@@ -966,7 +966,7 @@
     if(!st || st.phase!=='naming') return;
     var flipper = st.players[st.flipperIndex];
     if(!flipper || flipper.id!==online.myId) return;
-    if(!val) val = 'なんじゃもんじゃ'+(st.currentCard+1)+'号';
+    if(!val) val = 'なぞの生きもの'+(st.currentCard+1)+'号';
     var centerPile = (st.centerPile||[]).concat([st.currentCard]);
     var nextFlipper = (st.flipperIndex+1) % st.players.length;
     var deckEmpty = (st.deck||[]).length===0;

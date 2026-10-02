@@ -1,6 +1,6 @@
-# なんじゃこれ？（なんじゃもんじゃ風オンライン対戦ゲーム）
+# それ、なんて名前？
 
-スマホから遊べる、なんじゃもんじゃ風のオンライン対戦カードゲームです。
+はじめて見るヘンな生きものに名前をつけて、同じ子が出たら誰よりも早くその名前を答える、スマホから遊べるオンライン対戦ゲームです。
 単一の `najamonja.html` だけで動く静的サイトなので、GitHubリポジトリ＋GitHub Pages（または Vercel）でそのまま公開できます。
 
 ## 1. Firebase Realtime Database を用意する
@@ -31,7 +31,7 @@
 ```bash
 git init
 git add najamonja.html README.md
-git commit -m "なんじゃもんじゃオンライン対戦ゲーム"
+git commit -m "それ、なんて名前？ オンライン対戦ゲーム"
 git branch -M main
 git remote add origin https://github.com/<あなたのユーザー名>/<リポジトリ名>.git
 git push -u origin main
