@@ -200,6 +200,10 @@
   .named-chip{ background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--ink); opacity:.8; display:flex; align-items:center; gap:4px;}
   .named-chip svg{ width:28px; height:28px; flex:none; }
 
+  a.btn{ text-decoration:none; }
+  .support-box{ margin-top:8px; display:flex; flex-direction:column; gap:8px; }
+  .support-text-link{ text-align:center; font-size:13px; font-weight:700; color:var(--plum); text-decoration:underline; padding:4px; }
+
   .countdown{ text-align:center; font-size:14px; font-weight:700; color:var(--coral); margin-bottom:4px; }
   .countdown b{ font-size:26px; font-weight:900; }
 </style>
@@ -240,6 +244,7 @@
     <div class="spacer"></div>
     <div class="foot-actions">
       <button class="btn btn-primary" id="btnOnlineGo">部屋を作る</button>
+      <a class="support-text-link support-link" target="_blank" rel="noopener">このゲームを応援する</a>
     </div>
   </section>
 
@@ -303,6 +308,10 @@
     <div class="foot-actions">
       <button class="btn btn-primary" id="btnOnlineReplay">同じ部屋でもう一度</button>
       <button class="btn btn-ghost" id="btnOnlineResultLeave">部屋を出る</button>
+      <div class="support-box">
+        <div class="hint">楽しかったら、応援してもらえるとうれしいです！</div>
+        <a class="btn btn-plum support-link" target="_blank" rel="noopener">このゲームを応援する</a>
+      </div>
     </div>
   </section>
 
@@ -565,6 +574,10 @@
 
   /* ---------- state ---------- */
   var PLAYER_COLORS = ['#E85D5D','#3E8E5A','#5B2A86','#F2A93B','#2F8FBF','#C0567A'];
+
+  // itch.io donation page (works once payouts are set up on itch.io)
+  var SUPPORT_URL = 'https://abetomohiro.itch.io/sore-nante-namae/donate';
+  document.querySelectorAll('.support-link').forEach(function(a){ a.href = SUPPORT_URL; });
 
   function showScreen(id){
     document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
